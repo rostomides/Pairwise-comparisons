@@ -7,9 +7,9 @@
 #Building the string of the function as string that will be evaluated after
 ###########################################################################
 
-build_equation_string = function(dataset, formula_, additional_options=NULL){
+build_equation_string = function(dataset, formula_, function_name, additional_options=NULL){
   #Get dataset's name as a string
-  data_name = deparse(substitute(dataset)
+  data_name = deparse(substitute(dataset))
   #Check if the function has other arguments in addition to the formula, and build the equation as a string
   if(is.null(additional_options)){
     equation = paste(function_name, "(", 
@@ -42,17 +42,20 @@ Pairwise_comparisons = function(dataset, outcome_labels, function_name,
   
   #Create a list to store the results as results objects
   final_results <- list()
-  combinations <- apply(all_combin, 2, function(x,dataset){
+  combinations <- apply(all_combin, 2, function(x,dataset, outcome_labels, function_name, 
+                                                formula_, additional_options){
     #Subset the dataset depending of the combination of 2 factors
     sub_table <- dataset[dataset[,outcome_labels]%in%x,]
     #Order the sub_dataset to get the righ order of factors
     sub_table <- sub_table[order(sub_table[outcome_labels]),]
     #Build the string of the function
-    equation <- build_equation_string(sub_table, formula_, additional_options)
+    equation <- build_equation_string(dataset=sub_table, formula_=formula_, 
+                                      function_name=function_name, additional_options=additional_options)
+    message(equation)
     #Evaluate the function and return the results
     final_results[[paste(unique(sub_table[,outcome_labels]), collapse = "_vs_")]] <<- eval(parse(text=equation), envir = sub_table)
     return(NULL)
-  }, dataset)
+  }, dataset, outcome_labels, function_name, formula_, additional_options)
   
   return(final_results)
 }
@@ -78,7 +81,8 @@ dataset = data.frame("labels" = sample(c("A", "B", "C"), 100, replace = T),
                     
 #Try different functions
 res = Pairwise_comparisons( dataset=dataset, outcome_labels="labels", function_name="glm", 
-                      formula_ ="factor(labels)~Values", additional_options=c("family = 'binomial'", "model = TRUE"))
+                      formula_ ="factor(labels)~Values", 
+                      additional_options=c("family = 'binomial'", "model = TRUE"))
 
 res = Pairwise_comparisons( dataset=dataset, outcome_labels="labels", function_name="t.test", 
                             formula_ ="Values~factor(labels)" 

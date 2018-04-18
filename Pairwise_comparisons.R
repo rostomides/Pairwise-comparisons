@@ -6,9 +6,9 @@
 #Building the string of the function as string that will be evaluated after
 ###########################################################################
 
-build_equation_string = function(dataset, formula_, additional_options=NULL){
+build_equation_string = function(dataset, function_name, formula_, additional_options=NULL){
   #Get dataset's name as a string
-  data_name = deparse(substitute(dataset)
+  data_name = deparse(substitute(dataset))
   #Check if the function has other arguments in addition to the formula, and build the equation as a string
   if(is.null(additional_options)){
     equation = paste(function_name, "(", 
@@ -30,20 +30,24 @@ Pairwise_comparisons = function(dataset, outcome_labels, function_name, formula_
   #Order the dataset to get the right order of the factors
   dataset <- dataset[order(dataset[,outcome_labels]),]
   #Get the unique factors available in the outcome_labels column
-  groups <- as.character(unique(dataset[,outcome_labels]))
-  #Create a nother vector groups without the first element
-  groups_m <-groups[-1]
+  groups_m <- as.character(unique(dataset[,outcome_labels]))
+ 
   #Create a list to store the results as results objects
   final_results <- list()
   #Perform the pairwise comparisons
-  combinations <- sapply(groups[-length(groups)], function(x,dataset){    
-    sub_table <- dataset[dataset[,outcome_labels]%in%c(x,groups_m[1]),]
-    sub_table <- sub_table[order(sub_table[outcome_labels]),]
-    equation <- build_equation_string(sub_table, formula_, additional_options)
-    final_results[[paste(unique(sub_table[,outcome_labels]), collapse = "_vs_")]] <<- eval(parse(text=equation), envir = sub_table)
+  combinations <- sapply(groups[-length(groups)], function(x, dataset, outcome_labels){ 
     groups_m <<-groups_m[-1]
+    current_element = x
+    one_vs_remaining = sapply(groups_m, function(x, dataset, outcome_labels, current_element){
+      sub_table <- dataset[dataset[,outcome_labels]%in%c(x, current_element),]
+      sub_table <- sub_table[order(sub_table[outcome_labels]),]
+      equation <- build_equation_string(dataset=sub_table, formula_=formula_, 
+                                        function_name=function_name, additional_options=additional_options)
+      final_results[[paste(unique(sub_table[,outcome_labels]), collapse = "_vs_")]] <<- eval(parse(text=equation), envir = sub_table)
+      return(NULL)
+    }, dataset, outcome_labels, current_element)
     return(NULL)
-  }, dataset)
+  }, dataset, outcome_labels)
   
   return(final_results)
 }
